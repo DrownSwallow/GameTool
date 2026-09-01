@@ -129,6 +129,7 @@ capacitor.config.json  # Capacitor 配置
 
 ## 文档
 
+- [开发接口清单](docs/interface-reference.md) — 全部框架接口 + 大富翁示例
 - [插件开发指南](docs/plugin-development.md)
 - [开发规范](docs/DEVELOPMENT.md)
 - [更新日志](CHANGELOG.md)
