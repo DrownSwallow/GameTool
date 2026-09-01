@@ -135,4 +135,4 @@ capacitor.config.json  # Capacitor 配置
 
 ## 许可
 
-[MIT](LICENSE)
+[Apache License 2.0](LICENSE)
