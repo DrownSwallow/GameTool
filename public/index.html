@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>桌游工具</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+
+  <div id="screen-menu" class="screen">
+    <div class="home-root">
+      <!-- Tab 内容区 -->
+      <div class="home-pages">
+        <!-- 第一页：游戏 -->
+        <div id="home-tab-games" class="home-tab">
+          <div class="games-header">
+            <div class="games-title">游戏列表</div>
+            <button class="clock-btn" id="clock-btn" onclick="UI.openHistoryMenu()">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="9"></circle>
+                <polyline points="12 7 12 12 15.5 13.5"></polyline>
+              </svg>
+            </button>
+          </div>
+          <div class="games-grid" id="games-grid">
+            <!-- 动态渲染游戏列表 -->
+          </div>
+        </div>
+        <!-- 第二页：房间 -->
+        <div id="home-tab-room" class="home-tab hidden">
+          <div class="room-page">
+            <div class="room-tabs">
+              <button class="room-tab-btn active" data-mode="create" onclick="UI.switchRoomMode('create')">创建房间</button>
+              <button class="room-tab-btn" data-mode="join" onclick="UI.switchRoomMode('join')">加入房间</button>
+            </div>
+            <div class="room-pane-track" id="room-pane-track">
+              <div id="room-create-pane" class="room-pane">
+                <div class="form-row"><label>我的昵称</label><input type="text" id="rc-nickname" placeholder="玩家" maxlength="12"></div>
+                <div class="form-row"><label>房间名</label><input type="text" id="rc-roomname" placeholder="输入房间名" maxlength="12"></div>
+                <div class="form-row"><label>房间密码</label><input type="text" id="rc-password" placeholder="可留空" maxlength="12"></div>
+                <div class="form-row"><label>端口</label><input type="text" id="rc-port" placeholder="如 3210（留空自动3210）" maxlength="6"></div>
+                <div class="form-row"><label>游戏</label><button class="mini-btn select-btn capsule-select" id="rc-game-btn" onclick="UI.openGameSelect()">选择游戏 ▾</button></div>
+                <button class="big-btn primary" onclick="UI.roomCreate()">创建房间</button>
+              </div>
+              <div id="room-join-pane" class="room-pane">
+                <div class="form-row"><label>我的昵称</label><input type="text" id="rj-nickname" placeholder="玩家" maxlength="12"></div>
+                <div class="form-row"><label>加入方式</label><button class="mini-btn select-btn" id="rj-joinmode-btn">房主IP直连</button></div>
+                <div id="rj-join-ip-row" class="form-row"><label>房主IP</label><input type="text" id="rj-host" placeholder="如 192.168.1.5"></div>
+                <div id="rj-join-port-row" class="form-row"><label>端口</label><input type="text" id="rj-port" placeholder="如 3001（留空自动补3001）" maxlength="6"></div>
+                <div id="rj-join-code-row" class="form-row hidden"><label>房间号</label><input type="text" id="rj-joincode" placeholder="5位" maxlength="5"></div>
+                <div class="form-row"><label>房间密码</label><input type="text" id="rj-joinpass" placeholder="无密码可留空" maxlength="12"></div>
+                <button class="big-btn primary" onclick="UI.roomJoin()">加入房间</button>
+                <button class="big-btn" onclick="UI.showRoomList()">搜索房间</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- 第三页：下载（游戏插件市场） -->
+        <div id="home-tab-downloads" class="home-tab hidden">
+          <div class="downloads-page">
+            <div class="settings-title">插件安装</div>
+            <div class="downloads-tip muted">本平台不含内置游戏。游戏以插件形式安装：可从插件仓库地址下载脚本，或从本地选择插件安装包（zip）。</div>
+            <div class="settings-title" style="margin-top:10px;font-size:15px">从文件安装（zip）</div>
+            <div class="form-row">
+              <label>插件包</label>
+              <div class="zip-picker">
+                <label class="zip-picker-btn" for="dl-zip">选择 zip 文件</label>
+                <input type="file" id="dl-zip" accept=".zip" class="zip-picker-input">
+                <span class="zip-picker-name muted" id="dl-zip-name">未选择文件</span>
+              </div>
+            </div>
+            <button class="big-btn primary" onclick="UI.installZipPlugin()">从 zip 安装插件</button>
+            <div class="settings-title" style="margin-top:18px;font-size:15px">从地址安装（脚本）</div>
+            <div class="form-row">
+              <label>插件地址</label>
+              <input type="text" id="dl-url" placeholder="https://…/plugin.js（插件脚本 URL）">
+            </div>
+            <button class="big-btn primary" onclick="UI.downloadPlugin()">下载并安装</button>
+            <div class="dl-status muted" id="dl-status"></div>
+            <div class="settings-title" style="margin-top:18px">已安装插件</div>
+            <div id="dl-installed" class="dl-list">
+              <p class="muted">加载中…</p>
+            </div>
+          </div>
+        </div>
+        <!-- 第四页：设置 -->
+        <div id="home-tab-settings" class="home-tab hidden">
+          <div class="settings-page">
+            <div class="settings-title">设置</div>
+            <div class="settings-section">
+              <div class="form-row">
+                <label>主题色</label>
+                <button class="mini-btn select-btn" id="theme-btn" onclick="UI.openThemeMenu()">黄色</button>
+              </div>
+              <div class="form-row">
+                <label>显示模式</label>
+                <label class="switch">
+                  <input type="checkbox" id="set-light">
+                  <span class="switch-slider"><span class="switch-knob"></span></span>
+                </label>
+                <span class="form-tip">开：浅色模式　关：深色模式</span>
+              </div>
+              <div class="form-row">
+                <label>亚克力材质</label>
+                <label class="switch">
+                  <input type="checkbox" id="set-acrylic">
+                  <span class="switch-slider"><span class="switch-knob"></span></span>
+                </label>
+                <span class="form-tip">开：面板/弹窗使用毛玻璃半透明效果</span>
+              </div>
+              <div id="acrylic-opts" class="form-row hidden">
+                <label>透明度</label>
+                <input type="range" id="acrylic-opacity" min="0" max="100" value="40">
+                <span class="form-tip" id="acrylic-opacity-label">40%</span>
+              </div>
+            </div>
+            <!-- 日志（debug） -->
+            <div class="settings-section" style="margin-top:20px">
+              <div class="form-row" style="justify-content:space-between">
+                <label style="font-weight:700;color:var(--md-on-surface)">运行日志</label>
+                <span style="display:flex;gap:6px">
+                  <span class="mini-btn select-btn" id="log-filter-btn" style="cursor:pointer">全部 ▾</span>
+                  <span class="mini-btn primary" id="log-menu-btn" style="cursor:pointer">日志 ▾</span>
+                </span>
+              </div>
+              <div class="form-row">
+                <div class="log-panel" id="log-panel">
+                  <p class="muted">暂无日志</p>
+                </div>
+              </div>
+              <div class="form-row">
+                <span class="form-tip" id="log-count">0 条</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- 底部导航 -->
+      <div class="bottom-nav">
+        <button class="nav-btn active" data-tab="games" onclick="UI.switchTab('games')">
+          <span class="nav-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="4"/><path d="M8 12h0M14 9v6M10.5 10.5l-1.5 3M13.5 10.5l1.5 3"/></svg>
+          </span><span class="nav-label">游戏</span>
+        </button>
+        <button class="nav-btn" data-tab="room" onclick="UI.switchTab('room')">
+          <span class="nav-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5L12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M9.5 21v-6h5v6"/></svg>
+          </span><span class="nav-label">房间</span>
+        </button>
+        <button class="nav-btn" data-tab="downloads" onclick="UI.switchTab('downloads')">
+          <span class="nav-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 17v3a1 1 0 001 1h14a1 1 0 001-1v-3"/></svg>
+          </span><span class="nav-label">下载</span>
+        </button>
+        <button class="nav-btn" data-tab="settings" onclick="UI.switchTab('settings')">
+          <span class="nav-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.5"/><path d="M19.4 15a1.7 1.7 0 00.3 1.9l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.9-.3 1.7 1.7 0 00-1 1.6V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1-1.6 1.7 1.7 0 00-1.9.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.9 1.7 1.7 0 00-1.6-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.6-1 1.7 1.7 0 00-.3-1.9l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.9.3 1.7 1.7 0 001-1.6V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.6 1.7 1.7 0 001.9-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.9 1.7 1.7 0 001.6 1h.1a2 2 0 110 4h-.1a1.7 1.7 0 00-1.6 1z"/></svg>
+          </span><span class="nav-label">设置</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="screen-lan" class="screen hidden">
+    <div class="lan-box">
+      <h2>局域网联机</h2>
+      <div id="lan-choice">
+        <div class="form-row">
+          <label>我的昵称</label>
+          <input type="text" id="lan-nickname" placeholder="玩家" maxlength="12">
+        </div>
+        <button class="big-btn primary" onclick="UI.showLanJoin()">加入房间</button>
+        <button class="big-btn" onclick="UI.showLanCreate()">创建房间</button>
+        <button class="big-btn" onclick="UI.showMenu()">返回</button>
+      </div>
+      <div id="lan-join" class="hidden">
+        <div class="lan-sub-head">
+          <h3>加入房间</h3>
+          <button class="mini-btn primary" onclick="UI.showRoomList()">房间列表</button>
+        </div>
+        <div class="form-row">
+          <label>加入方式</label>
+          <button class="mini-btn select-btn" id="lan-joinmode-btn">房主IP直连</button>
+        </div>
+        <div id="lan-join-ip-row" class="form-row">
+          <label>房主IP</label>
+          <input type="text" id="lan-host" placeholder="如 192.168.1.5">
+        </div>
+        <div id="lan-join-port-row" class="form-row">
+          <label>端口</label>
+          <input type="text" id="lan-port" placeholder="如 3001（留空自动补3001）" maxlength="6">
+        </div>
+        <div id="lan-join-code-row" class="form-row hidden">
+          <label>房间号</label>
+          <input type="text" id="lan-joincode" placeholder="5位，如 AB3K9" maxlength="5" style="text-transform:uppercase;letter-spacing:3px;width:150px">
+        </div>
+        <div class="form-row"><label>房间密码</label><input type="text" id="lan-joinpass" placeholder="无密码可留空" maxlength="12"></div>
+        <button class="big-btn primary" onclick="UI.joinByCode()">加入房间</button>
+        <p class="hint">房主IP直连：只需房主IP即可加入；房间号方式：仅输入房间号，自动匹配房主设备</p>
+        <button class="big-btn" onclick="UI.showLanChoice()">返回</button>
+      </div>
+      <div id="lan-create" class="hidden">
+        <h3>创建房间</h3>
+        <div class="form-row"><label>房间名</label><input type="text" id="lan-roomname" placeholder="输入房间名" maxlength="12"></div>
+        <div class="form-row"><label>房间密码</label><input type="text" id="lan-createpass" placeholder="可留空" maxlength="12"></div>
+        <button class="big-btn primary" onclick="UI.createRoom()">创建房间</button>
+        <p class="hint">创建后可在房间大厅设置人数与房间密码</p>
+        <button class="big-btn" onclick="UI.showLanChoice()">返回</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="screen-room" class="screen hidden">
+    <div class="room-box">
+      <h2 id="room-title">房间大厅</h2>
+      <div id="room-info-card" class="menu-info"></div>
+      <div id="room-host-controls" class="hidden">
+        <div class="form-row">
+          <label>人数</label>
+          <button class="mini-btn" id="room-seats-btn" onclick="UI.openSeatsMenu()">4人</button>
+        </div>
+        <div class="form-row">
+          <label>房间密码</label>
+          <input type="text" id="room-pass" placeholder="可留空" maxlength="12">
+          <button class="mini-btn" onclick="UI.lobbySetPass()">应用</button>
+        </div>
+      </div>
+      <h3 style="margin:10px 0 6px;color:var(--md-primary)">在线玩家</h3>
+      <div id="room-players" class="seat-list"></div>
+      <div class="btn-row">
+        <button id="btn-room-ready" class="big-btn primary" onclick="UI.lobbyReady()">准备</button>
+        <button id="btn-room-start" class="big-btn primary hidden" onclick="UI.roomStart()">开始游戏</button>
+        <button id="btn-room-loadsave" class="big-btn hidden" onclick="UI.lobbyLoadSave()">读取存档</button>
+        <button class="big-btn" onclick="UI.leaveLobby()">离开房间</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="screen-settings" class="screen hidden">
+    <div class="lan-box">
+      <h2>设置</h2>
+      <div class="form-row">
+        <label>主题色</label>
+        <button class="mini-btn select-btn" id="theme-btn" onclick="UI.openThemeMenu()">黄色</button>
+      </div>
+      <div class="form-row">
+        <label>显示模式</label>
+        <label class="switch">
+          <input type="checkbox" id="set-light">
+          <span class="switch-slider"><span class="switch-knob"></span></span>
+        </label>
+        <span class="form-tip">开：浅色模式　关：深色模式</span>
+      </div>
+      <div class="form-row">
+        <label>亚克力材质</label>
+        <label class="switch">
+          <input type="checkbox" id="set-acrylic">
+          <span class="switch-slider"><span class="switch-knob"></span></span>
+        </label>
+        <span class="form-tip">开：面板/弹窗使用毛玻璃半透明效果</span>
+      </div>
+      <div id="acrylic-opts" class="form-row hidden">
+        <label>透明度</label>
+        <input type="range" id="acrylic-opacity" min="0" max="100" value="40">
+        <span class="form-tip" id="acrylic-opacity-label">40%</span>
+      </div>
+      <div class="btn-row">
+        <button class="big-btn primary" onclick="UI.showMenu()">返回</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div id="modal-root"></div>
+<div id="toast-root"></div>
+
+<!-- 系统框架（纯平台主体，无内置游戏；游戏全部由插件通过 GameFramework 动态注册） -->
+<!-- JSZip：用于从本地选择 zip 插件包解压安装 -->
+<script src="vendor/jszip.min.js"></script>
+<script src="client.js"></script>
+</body>
+</html>

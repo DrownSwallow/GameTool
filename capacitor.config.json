@@ -1,0 +1,11 @@
+{
+  "appId": "com.gametool.app",
+  "appName": "桌游工具",
+  "webDir": "public",
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "allowMixedContent": true
+  }
+}

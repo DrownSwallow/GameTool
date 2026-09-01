@@ -1,0 +1,18 @@
+{
+  "name": "gametool",
+  "version": "2.3.25",
+  "description": "GameTool 桌游平台 - 基于 Capacitor 的可扩展桌游运行框架，游戏以插件形式动态安装",
+  "private": true,
+  "scripts": {
+    "start": "npx serve public"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.2.1",
+    "@capacitor/app": "^6.0.3",
+    "@capacitor/cli": "^6.2.1",
+    "@capacitor/core": "^6.2.1",
+    "@capacitor/filesystem": "^6.0.4",
+    "jszip": "^3.10.1",
+    "ws": "^8.18.0"
+  }
+}

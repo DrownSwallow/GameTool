@@ -1,0 +1,29 @@
+# ── Node ──
+node_modules/
+package-lock.json
+
+# ── Capacitor 构建产物 ──
+dist/
+www/
+
+# ── 版本归档与发布包（不纳入源码库） ──
+versions/
+releases/
+*.apk
+*.aab
+
+# ── 系统 / 编辑器 ──
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+*.iml
+
+# ── 测试临时产物 ──
+browser-test/
+test-*.js
+*.log
+
+# ── 本地配置（含 SDK 路径等敏感信息） ──
+local.properties
