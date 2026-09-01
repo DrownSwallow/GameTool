@@ -1,6 +1,6 @@
 {
   "name": "gametool",
-  "version": "2.3.25",
+  "version": "2.3.29",
   "description": "GameTool 桌游平台 - 基于 Capacitor 的可扩展桌游运行框架，游戏以插件形式动态安装",
   "private": true,
   "scripts": {

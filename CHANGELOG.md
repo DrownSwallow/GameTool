@@ -2,6 +2,38 @@
 
 本文件记录每个版本的功能变更，格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## [2.3.29] - 2026-09-01
+
+### 修复
+- **GitHub 插件安装 URL 规范化**：从地址安装（脚本/zip）时，自动把 `github.com/.../blob/...` 与 `.../raw/...` 仓库页链接转换为 `raw.githubusercontent.com` 直链，避免把 HTML 页面当脚本加载导致必失败
+- **网络/URL 错误提示区分**：网络不可达（Failed to fetch、超时、连接重置等）给出明确提示（提示检查网络/代理），不再只显示模糊的「下载失败」
+
+---
+
+## [2.3.28] - 2026-09-01
+
+### 修复
+- **GitHub 插件从地址安装（彻底解决 CORS）**：新增原生 `GdpiHostPlugin.downloadFile`（HttpURLConnection 下载，绕过浏览器 CORS），从 URL 安装 zip 时优先原生下载、回退 fetch；不再受 `release-assets.githubusercontent.com` 跨域重定向拦截
+- 从地址安装失败时给出明确错误提示（原生/fetch 双路径原因）
+
+---
+
+## [2.3.27] - 2026-09-01
+
+### 修复
+- **GitHub 插件从地址安装的 CORS/重定向问题**：改用 GitHub API 资产端点（`api.github.com/.../releases/assets/{id}`，带 `Accept: application/octet-stream`）下载，绕过 `release-assets.githubusercontent.com` 的跨域重定向导致的 "Failed to fetch"
+- 下载内容非有效 zip 时给出明确提示（区分"链接过期"与"网络失败"）
+
+---
+
+## [2.3.26] - 2026-09-01
+
+### 新增
+- **从 URL 下载 zip 插件包安装**：插件安装页新增「从地址安装（zip）」，输入 zip 包 URL（如 GitHub Releases 资产地址）即可下载、解压、安装，无需手动下载文件
+- 插件版本号以 `manifest.json` 为权威（安装时始终覆盖插件注册对象）
+
+---
+
 ## [2.3.25] - 2026-09-01
 
 ### 大富翁插件升级（仅插件，未改框架）

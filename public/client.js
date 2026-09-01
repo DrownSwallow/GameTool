@@ -3,7 +3,7 @@
 
   // 系统框架为纯平台主体：不内置任何游戏引擎/逻辑，所有游戏均由插件通过 GameFramework 注册。
   // 系统级版本号：联机版本门控属于系统框架职责
-  var APP_VERSION = '2.3.25';
+  var APP_VERSION = '2.3.29';
 
   var G = {
     mode: null,
@@ -1035,10 +1035,13 @@
     // 动态加载插件脚本（后续对接 GitHub 仓库下载）
     loadScript: function (url) {
       return new Promise(function (resolve, reject) {
+        var real = normalizeGithubUrl(url);
         var s = document.createElement('script');
-        s.src = url;
+        s.src = real;
         s.onload = function () { resolve(); };
-        s.onerror = function () { reject(new Error('插件脚本加载失败: ' + url)); };
+        s.onerror = function () {
+          reject(new Error(friendlyDownloadError('插件脚本加载失败: ' + url, null)));
+        };
         document.head.appendChild(s);
       });
     },
@@ -1753,10 +1756,10 @@
       renderDownloads();
       renderGameList();
     }).catch(function (e) {
-      var emsg = (e && e.message ? e.message : String(e));
-      if (status) { status.textContent = '下载失败：' + emsg; status.className = 'dl-status err'; }
+      var emsg = friendlyDownloadError('下载失败', e);
+      if (status) { status.textContent = emsg; status.className = 'dl-status err'; }
       toast('插件下载失败', '#f87171');
-      addLog('插件下载失败 | url=' + url + ' :: ' + emsg, 'err');
+      addLog('插件下载失败 | url=' + url + ' :: ' + (e && e.message ? e.message : e), 'err');
     });
   };
 
@@ -1807,6 +1810,147 @@
     };
     reader.readAsArrayBuffer(file);
   };
+
+  // 从 URL 下载 zip 插件包并安装（如 GitHub Releases 资产）
+  UI.installZipUrl = function () {
+    var url = ($('dl-zip-url') ? $('dl-zip-url').value.trim() : '');
+    var status = $('dl-status');
+    if (!url) {
+      if (status) { status.textContent = '请填写插件 zip 包 URL'; status.className = 'dl-status err'; }
+      return;
+    }
+    if (!window.JSZip) {
+      if (status) { status.textContent = '缺少解压组件（jszip），无法安装 zip 插件'; status.className = 'dl-status err'; }
+      return;
+    }
+    if (status) { status.textContent = '正在下载 ' + url + ' …'; status.className = 'dl-status'; }
+    addLog('zip 插件下载开始 | url=' + url, 'info');
+    var fname = url.split('/').pop() || 'plugin.zip';
+    // 解析 GitHub release 链接为实时资产 URL
+    resolveZipUrl(url).catch(function () { return url; }).then(function (realUrl) {
+      // 1) 优先用原生下载（Capacitor GdpiHostPlugin，绕过浏览器 CORS）
+      return nativeDownloadZip(realUrl, fname).then(function (buf) {
+        return { buf: buf, via: 'native' };
+      }).catch(function (e) {
+        // 2) 原生失败回退 fetch（浏览器环境）
+        return fetchZip(realUrl).then(function (buf) {
+          return { buf: buf, via: 'fetch' };
+        }).catch(function (e2) {
+          throw new Error('下载失败：' + (e2 && e2.message ? e2.message : e2) + '（原生:' + (e && e.message ? e.message : e) + '）');
+        });
+      });
+    }).then(function (res) {
+      var zip = new window.JSZip();
+      return zip.loadAsync(res.buf).catch(function () {
+        throw new Error('下载内容不是有效的 zip 文件（链接可能已过期，请用 github.com 的 release 下载链接）');
+      }).then(function (z) { return parsePluginZip(z); });
+    }).then(function (pluginScript) {
+      installPluginScript(pluginScript, fname, status);
+    }).catch(function (e) {
+      var emsg = friendlyDownloadError('安装失败', e);
+      if (status) { status.textContent = emsg; status.className = 'dl-status err'; }
+      toast('插件安装失败', '#f87171');
+      addLog('zip 插件下载解析失败 | url=' + url + ' :: ' + (e && e.message ? e.message : e), 'err');
+    });
+  };
+
+  // 原生下载 zip（Capacitor GdpiHostPlugin.downloadFile → 读取缓存文件），返回 ArrayBuffer
+  function nativeDownloadZip(url, fname) {
+    var Cp = window.Capacitor;
+    if (!Cp || !Cp.Plugins || !Cp.Plugins.GdpiHost || !Cp.Plugins.GdpiHost.downloadFile) {
+      return Promise.reject(new Error('原生下载不可用'));
+    }
+    return Cp.Plugins.GdpiHost.downloadFile({ url: url, filename: fname }).then(function (res) {
+      var path = res && res.path;
+      if (!path) return Promise.reject(new Error('原生下载未返回文件'));
+      // 用 Filesystem 读取缓存文件为 base64，转 ArrayBuffer
+      return readFileToArrayBuffer(path);
+    });
+  }
+  // 读取绝对路径文件为 ArrayBuffer（原生 Filesystem readFile base64 → Uint8Array）
+  function readFileToArrayBuffer(path) {
+    var Cp = window.Capacitor;
+    return Cp.Plugins.Filesystem.readFile({ path: path }).then(function (res) {
+      var b64 = res && res.data;
+      if (!b64) return Promise.reject(new Error('读取文件失败'));
+      var binary = atob(b64);
+      var len = binary.length;
+      var bytes = new Uint8Array(len);
+      for (var i = 0; i < len; i++) bytes[i] = binary.charCodeAt(i);
+      return bytes.buffer;
+    });
+  }
+  // fetch 下载 zip，返回 ArrayBuffer
+  function fetchZip(url) {
+    var opts = { method: 'GET' };
+    if (/api\.github\.com\/.*\/assets\//.test(url)) opts.headers = { 'Accept': 'application/octet-stream' };
+    return fetch(url, opts).then(function (resp) {
+      if (!resp.ok) throw new Error('下载失败（HTTP ' + resp.status + '）');
+      return resp.arrayBuffer();
+    });
+  }
+
+  // 把 GitHub 页面/仓库链接规范化为可直接下载的直链
+  // 支持：
+  //   github.com/{o}/{r}/blob/{branch}/{path}  → raw.githubusercontent.com/{o}/{r}/{branch}/{path}
+  //   github.com/{o}/{r}/raw/{branch}/{path}    → raw.githubusercontent.com/...（同上）
+  //   raw.githubusercontent.com 原样返回
+  //   releases/download / releases/tag 原样返回（走 resolveZipUrl 处理）
+  function normalizeGithubUrl(url) {
+    if (!url) return url;
+    // blob 或 raw 形式 → raw.githubusercontent.com 直链
+    var m = url.match(/^https?:\/\/github\.com\/([^\/]+)\/([^\/]+)\/(?:blob|raw)\/([^\/]+)\/(.+)$/);
+    if (m) return 'https://raw.githubusercontent.com/' + m[1] + '/' + m[2] + '/' + m[3] + '/' + m[4];
+    return url;
+  }
+
+  // 把网络/URL 异常转成用户能看懂的提示（区分网络不可达与链接错误）
+  function friendlyDownloadError(prefix, err) {
+    var msg = err && err.message ? err.message : (err ? String(err) : '');
+    var lower = (prefix + ' ' + msg).toLowerCase();
+    if (/failed to fetch|networkerror|net::err|unable to connect|timeout|could not connect|econnreset|socketerror|基础连接|网络|net::/i.test(lower)) {
+      return prefix + '：网络无法访问该地址，请检查网络连接（若需科学上网，请在系统/浏览器开启代理或 VPN）';
+    }
+    if (msg) return prefix + '：' + msg;
+    return prefix;
+  }
+
+  // 把 GitHub release 下载链接解析为实时有效资产 URL
+  // 输入支持：
+  //   https://github.com/{owner}/{repo}/releases/download/{tag}/{asset}
+  //   https://github.com/{owner}/{repo}/releases/tag/{tag}
+  // 非 GitHub 链接原样返回
+  function resolveZipUrl(url) {
+    url = normalizeGithubUrl(url);
+    // 匹配 download 形式：/releases/download/{tag}/{asset}
+    var dl = url.match(/github\.com\/([^\/]+)\/([^\/]+)\/releases\/download\/([^\/?#]+)\/([^\/?#]+)/);
+    if (dl) {
+      var ownerD = dl[1], repoD = dl[2], tagD = dl[3], assetD = dl[4];
+      return githubAssetUrl(ownerD, repoD, tagD, assetD);
+    }
+    // 匹配 tag 形式：/releases/tag/{tag}
+    var tg = url.match(/github\.com\/([^\/]+)\/([^\/]+)\/releases\/tag\/([^\/?#]+)/);
+    if (tg) {
+      return githubAssetUrl(tg[1], tg[2], tg[3], '');
+    }
+    return Promise.resolve(url);
+  }
+  // 用 GitHub API 查某 release 的资产下载地址（返回 API 资产下载 URL，CORS 友好、不重定向）
+  function githubAssetUrl(owner, repo, tag, wanted) {
+    var apiUrl = 'https://api.github.com/repos/' + owner + '/' + repo + '/releases/tags/' + encodeURIComponent(tag);
+    return fetch(apiUrl).then(function (r) {
+      if (!r.ok) throw new Error('GitHub 查询失败（HTTP ' + r.status + '）');
+      return r.json();
+    }).then(function (data) {
+      var assets = (data && data.assets) || [];
+      var asset = assets.find(function (a) { return a.name === wanted; }) || assets.find(function (a) { return /\.zip$/i.test(a.name); }) || assets[0];
+      if (!asset) return Promise.reject(new Error('未找到可下载的 zip 资产'));
+      // 优先用 GitHub API 资产下载端点（支持 CORS，不重定向，避免 release-assets 跨域失败）
+      if (asset.url) return asset.url;
+      if (asset.browser_download_url) return asset.browser_download_url;
+      return Promise.reject(new Error('资产缺少下载地址'));
+    });
+  }
 
   // 解析插件 zip：读取 manifest.json + 入口脚本，返回 { id, script }
   function parsePluginZip(z) {
@@ -1867,8 +2011,8 @@
       var reg = window.GameFramework.get(pkg.id);
       var okText = '插件安装成功';
       if (reg) {
-        // 用 manifest 的 version 同步到注册对象（插件未写 version 时也能正确显示）
-        if (pkg.manifest && pkg.manifest.version && !reg.version) {
+        // manifest 的 version 是权威版本号，始终覆盖插件注册对象的 version
+        if (pkg.manifest && pkg.manifest.version) {
           try { reg.version = pkg.manifest.version; } catch (e) {}
         }
         okText += '：' + (reg.name || pkg.id) + ' v' + (reg.version || '1.0');
